@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import math
 
 
 class Stochastic(object):
@@ -9,11 +10,9 @@ class Stochastic(object):
 		self.Qf = 20 #Grau do polinômio
 		self.N = np.arange(20,140,5,dtype=np.int)
 		self.sigma = np.arange(0,2.05,0.05,dtype=np.float) 
-		self.number_iteration = 1
+		self.number_iteration = 20
 		self.resultH2 = np.zeros((len(self.sigma),len(self.N)))
 		self.resultH10 = np.zeros((len(self.sigma),len(self.N)))
-
-
 
 	def iterativeLegendre(self, n, X):
 		if n == 0:
@@ -24,7 +23,7 @@ class Stochastic(object):
 			L = 0
 			L0 = np.ones(X.shape)
 			L1 = X
-			for i in  range(1,n):
+			for i in  range(2,n+1):
 				L = ( (2 * i - 1) / i) * X * L1 - ((i - 1) / i) * L0
 				L0 = L1
 				L1 = L
@@ -42,23 +41,23 @@ class Stochastic(object):
 			
 				X_n[l,m] = self.iterativeLegendre(m,X[l])
 
-		w_n = np.linalg.pinv(X_n) * y
+		w_n = np.dot(np.linalg.pinv(X_n),y)
 					
 		a = 0
 		b = 0
 
-		for l in range(self.Qf):
+		for l in range(self.Qf+1):
 			
-			if (l > self.Qf-1):
+			if (l > self.Qf+1):
 				a = 0
 			else:
 				a = a_norm[l]
-			if (l > 3-1):
+			if ((l+1) > gn):
 				b = 0
 			else:
 				b = w_n[l]
 			
-			Eout_n = Eout_n + np.sum((np.power((a - b),2) / (2 * l + 1) ))
+			Eout_n = Eout_n + (math.pow((a - b),2) / ((2 * l) + 1) )
 
 		return Eout_n	
 	
@@ -73,29 +72,29 @@ class Stochastic(object):
 					#gerando x no espaço [-1,1]
 					X = np.random.uniform(-1, 1, self.N[i]) #Gerando número aleatório com distribuição uniforme
 					
-					a = np.random.randn(self.Qf)			
+					a = np.random.randn(self.Qf+1)			
 					e = np.random.randn(self.N[i])
 					y = np.zeros(self.N[i])
 					
 					#normalizar coeficientes
 					k = 0
 
-					for l in range(self.Qf):
+					for l in range(self.Qf+1):
 
-						k = k + (np.power(a[l],2) / (2 * l + 1))
+						k = k + (math.pow(a[l],2) / (2 * l + 1))
 
-					a_norm = a / np.sqrt(2*k)
+					a_norm = np.divide(a,math.sqrt(2*k))
 					
 					#gerando um y dado um x pertencente ao espaço[-1,1]
 					for l in range(self.N[i]):
 
 						f_value = 0
 
-						for m in range(self.Qf):
+						for m in range(self.Qf+1):
 
-							f_value = f_value + a_norm[m] * self.iterativeLegendre(m-1,X[l])
+							f_value = f_value + (a_norm[m] * self.iterativeLegendre(m,X[l]))
 
-						y[l] = f_value + np.sqrt(self.sigma[j]) * e[l]
+						y[l] = f_value + (math.sqrt(self.sigma[j]) * e[l])
 					
 
 					self.resultH2[j,i]  = self.resultH2[j,i] + self.erro(2, X, y, a_norm, i)
